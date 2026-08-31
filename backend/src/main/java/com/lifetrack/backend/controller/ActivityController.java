@@ -10,7 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/activities")
-@CrossOrigin(origins = "http://localhost:5173")
+
 public class ActivityController {
 
     private final ActivityService activityService;
