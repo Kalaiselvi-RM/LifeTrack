@@ -237,4 +237,48 @@ public class TimerSessionService {
 
         timerSessionRepository.delete(session);
     }
+// =====================================================
+// UPDATE WASTED TIME
+// =====================================================
+
+public TimerSession updateWastedTime(
+        Long sessionId,
+        Long wastedSeconds
+) {
+
+    TimerSession session =
+            timerSessionRepository
+                    .findById(sessionId)
+                    .orElseThrow(() ->
+                            new RuntimeException(
+                                    "Timer session not found"
+                            )
+                    );
+
+    if (wastedSeconds == null) {
+        wastedSeconds = 0L;
+    }
+
+    if (wastedSeconds < 0) {
+        throw new RuntimeException(
+                "Wasted time cannot be negative"
+        );
+    }
+
+    if (session.getDurationSeconds() == null) {
+        throw new RuntimeException(
+                "Timer duration is not available"
+        );
+    }
+
+    if (wastedSeconds > session.getDurationSeconds()) {
+        throw new RuntimeException(
+                "Wasted time cannot be greater than timer duration"
+        );
+    }
+
+    session.setWastedSeconds(wastedSeconds);
+
+    return timerSessionRepository.save(session);
+}
 }

@@ -2,18 +2,30 @@ import { useEffect, useState } from "react";
 
 import {
   Play,
+  Pause,
+  Square,
   Clock3,
   Moon,
   Activity as ActivityIcon,
   Trash2,
+  Save,
+  Pencil,
 } from "lucide-react";
 
 import {
   getDashboardStats,
   getTimerSessions,
   deleteTimerSession,
+  updateWastedTime,
+  pauseTimerSession,
+  resumeTimerSession,
+  stopTimerSession,
 } from "../services/api";
 
+
+// =====================================================
+// DASHBOARD
+// =====================================================
 
 function Dashboard() {
 
@@ -33,6 +45,20 @@ function Dashboard() {
 
   const [historyError, setHistoryError] = useState("");
 
+  // Wasted time editing
+  const [editingSessionId, setEditingSessionId] =
+    useState(null);
+
+  const [wastedInput, setWastedInput] =
+    useState("");
+
+  const [savingWastedId, setSavingWastedId] =
+    useState(null);
+
+  // Timer action loading
+  const [actionSessionId, setActionSessionId] =
+    useState(null);
+
 
   // =====================================================
   // LOAD DATA
@@ -48,6 +74,35 @@ function Dashboard() {
 
 
   // =====================================================
+  // LIVE TIMER REFRESH
+  // =====================================================
+
+  useEffect(() => {
+
+    const hasRunningSession =
+      timerHistory.some(
+        (session) =>
+          session.status === "RUNNING"
+      );
+
+    if (!hasRunningSession) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+
+      setTimerHistory((previous) => [
+        ...previous,
+      ]);
+
+    }, 1000);
+
+    return () => clearInterval(interval);
+
+  }, [timerHistory]);
+
+
+  // =====================================================
   // LOAD DASHBOARD
   // =====================================================
 
@@ -59,7 +114,8 @@ function Dashboard() {
 
       setError("");
 
-      const data = await getDashboardStats();
+      const data =
+        await getDashboardStats();
 
       setDashboardStats(data);
 
@@ -96,7 +152,8 @@ function Dashboard() {
 
       setHistoryError("");
 
-      const data = await getTimerSessions();
+      const data =
+        await getTimerSessions();
 
       if (Array.isArray(data)) {
 
@@ -133,28 +190,31 @@ function Dashboard() {
   // DELETE TIMER SESSION
   // =====================================================
 
-  async function handleDeleteTimerSession(sessionId) {
+  async function handleDeleteTimerSession(
+    sessionId
+  ) {
 
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this timer session?"
-    );
+    const confirmed =
+      window.confirm(
+        "Are you sure you want to delete this timer session?"
+      );
 
     if (!confirmed) {
-
       return;
-
     }
 
     try {
 
-      await deleteTimerSession(sessionId);
+      await deleteTimerSession(
+        sessionId
+      );
 
-      // Remove deleted session from UI
-      setTimerHistory((previous) =>
-        previous.filter(
-          (session) =>
-            session.id !== sessionId
-        )
+      setTimerHistory(
+        (previous) =>
+          previous.filter(
+            (session) =>
+              session.id !== sessionId
+          )
       );
 
     } catch (err) {
@@ -175,23 +235,396 @@ function Dashboard() {
 
 
   // =====================================================
+  // PAUSE TIMER
+  // =====================================================
+
+  async function handlePauseSession(
+    sessionId
+  ) {
+
+    try {
+
+      setActionSessionId(sessionId);
+
+      const updatedSession =
+        await pauseTimerSession(
+          sessionId
+        );
+
+      setTimerHistory(
+        (previous) =>
+          previous.map(
+            (session) =>
+              session.id === sessionId
+                ? {
+                    ...session,
+                    ...updatedSession,
+                  }
+                : session
+          )
+      );
+
+    } catch (err) {
+
+      console.error(
+        "Failed to pause timer:",
+        err
+      );
+
+      alert(
+        err.message ||
+        "Failed to pause timer"
+      );
+
+    } finally {
+
+      setActionSessionId(null);
+
+    }
+
+  }
+
+
+  // =====================================================
+  // RESUME TIMER
+  // =====================================================
+
+  async function handleResumeSession(
+    sessionId
+  ) {
+
+    try {
+
+      setActionSessionId(sessionId);
+
+      const updatedSession =
+        await resumeTimerSession(
+          sessionId
+        );
+
+      setTimerHistory(
+        (previous) =>
+          previous.map(
+            (session) =>
+              session.id === sessionId
+                ? {
+                    ...session,
+                    ...updatedSession,
+                  }
+                : session
+          )
+      );
+
+    } catch (err) {
+
+      console.error(
+        "Failed to resume timer:",
+        err
+      );
+
+      alert(
+        err.message ||
+        "Failed to resume timer"
+      );
+
+    } finally {
+
+      setActionSessionId(null);
+
+    }
+
+  }
+
+
+  // =====================================================
+  // STOP TIMER
+  // =====================================================
+
+  async function handleStopSession(
+    sessionId
+  ) {
+
+    const confirmed =
+      window.confirm(
+        "Stop this timer session?"
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+
+      setActionSessionId(sessionId);
+
+      const updatedSession =
+        await stopTimerSession(
+          sessionId
+        );
+
+      setTimerHistory(
+        (previous) =>
+          previous.map(
+            (session) =>
+              session.id === sessionId
+                ? {
+                    ...session,
+                    ...updatedSession,
+                  }
+                : session
+          )
+      );
+
+    } catch (err) {
+
+      console.error(
+        "Failed to stop timer:",
+        err
+      );
+
+      alert(
+        err.message ||
+        "Failed to stop timer"
+      );
+
+    } finally {
+
+      setActionSessionId(null);
+
+    }
+
+  }
+
+
+  // =====================================================
+  // START EDITING WASTED TIME
+  // =====================================================
+
+  function startEditingWastedTime(
+    session
+  ) {
+
+    const currentWasted =
+      Number(
+        session.wastedSeconds || 0
+      );
+
+    setEditingSessionId(
+      session.id
+    );
+
+    setWastedInput(
+      String(currentWasted)
+    );
+
+  }
+
+
+  // =====================================================
+  // CANCEL EDITING
+  // =====================================================
+
+  function cancelEditingWastedTime() {
+
+    setEditingSessionId(null);
+
+    setWastedInput("");
+
+  }
+
+
+  // =====================================================
+  // SAVE WASTED TIME
+  // =====================================================
+
+  async function handleSaveWastedTime(
+    session
+  ) {
+
+    const totalSeconds =
+      getCurrentDuration(session);
+
+    let wastedSeconds =
+      Number(wastedInput);
+
+    if (
+      !Number.isFinite(
+        wastedSeconds
+      ) ||
+      wastedSeconds < 0
+    ) {
+
+      alert(
+        "Please enter a valid wasted time in seconds."
+      );
+
+      return;
+
+    }
+
+
+    if (
+      wastedSeconds >
+      totalSeconds
+    ) {
+
+      alert(
+        "Wasted time cannot be greater than total time."
+      );
+
+      return;
+
+    }
+
+
+    try {
+
+      setSavingWastedId(
+        session.id
+      );
+
+      const updatedSession =
+        await updateWastedTime(
+          session.id,
+          Math.floor(
+            wastedSeconds
+          )
+        );
+
+      setTimerHistory(
+        (previous) =>
+          previous.map(
+            (item) =>
+              item.id === session.id
+                ? {
+                    ...item,
+                    ...updatedSession,
+                  }
+                : item
+          )
+      );
+
+      setEditingSessionId(
+        null
+      );
+
+      setWastedInput("");
+
+    } catch (err) {
+
+      console.error(
+        "Failed to update wasted time:",
+        err
+      );
+
+      alert(
+        err.message ||
+        "Failed to update wasted time"
+      );
+
+    } finally {
+
+      setSavingWastedId(null);
+
+    }
+
+  }
+
+
+  // =====================================================
+  // GET CURRENT DURATION
+  // =====================================================
+
+  function getCurrentDuration(
+    session
+  ) {
+
+    const savedDuration =
+      Number(
+        session.durationSeconds || 0
+      );
+
+
+    // If timer is not running,
+    // backend duration is already correct.
+    if (
+      session.status !==
+      "RUNNING"
+    ) {
+
+      return Math.max(
+        0,
+        savedDuration
+      );
+
+    }
+
+
+    // Running timer:
+    // saved duration + current running segment
+
+    if (!session.lastResumedAt) {
+
+      return savedDuration;
+
+    }
+
+
+    const resumedAt =
+      new Date(
+        session.lastResumedAt
+      ).getTime();
+
+    const now =
+      Date.now();
+
+    const runningSeconds =
+      Math.max(
+        0,
+        Math.floor(
+          (now - resumedAt) /
+          1000
+        )
+      );
+
+
+    return (
+      savedDuration +
+      runningSeconds
+    );
+
+  }
+
+
+  // =====================================================
   // FORMAT DURATION
   // =====================================================
 
-  function formatDuration(seconds) {
+  function formatDuration(
+    seconds
+  ) {
 
     const totalSeconds =
-      Number(seconds || 0);
+      Math.max(
+        0,
+        Math.floor(
+          Number(seconds || 0)
+        )
+      );
+
 
     const hours =
       Math.floor(
         totalSeconds / 3600
       );
 
+
     const minutes =
       Math.floor(
-        (totalSeconds % 3600) / 60
+        (totalSeconds % 3600) /
+        60
       );
+
 
     const remainingSeconds =
       totalSeconds % 60;
@@ -220,16 +653,20 @@ function Dashboard() {
   // FORMAT DATE
   // =====================================================
 
-  function formatDate(dateString) {
+  function formatDate(
+    dateString
+  ) {
 
     if (!dateString) {
-
       return "-";
-
     }
 
+
     const date =
-      new Date(dateString);
+      new Date(
+        dateString
+      );
+
 
     if (
       Number.isNaN(
@@ -240,6 +677,7 @@ function Dashboard() {
       return "-";
 
     }
+
 
     return date.toLocaleDateString(
       "en-IN",
@@ -257,16 +695,20 @@ function Dashboard() {
   // FORMAT TIME
   // =====================================================
 
-  function formatTime(dateString) {
+  function formatTime(
+    dateString
+  ) {
 
     if (!dateString) {
-
       return "-";
-
     }
 
+
     const date =
-      new Date(dateString);
+      new Date(
+        dateString
+      );
+
 
     if (
       Number.isNaN(
@@ -277,6 +719,7 @@ function Dashboard() {
       return "-";
 
     }
+
 
     return date.toLocaleTimeString(
       "en-IN",
@@ -290,15 +733,8 @@ function Dashboard() {
 
 
   // =====================================================
-  // GET DASHBOARD VALUES SAFELY
+  // DASHBOARD VALUES
   // =====================================================
-
-  const focusTime =
-    dashboardStats?.focusTime ??
-    dashboardStats?.focusTimeSeconds ??
-    dashboardStats?.totalFocusTime ??
-    0;
-
 
   const activityTime =
     dashboardStats?.activityTime ??
@@ -320,7 +756,15 @@ function Dashboard() {
 
   return (
 
-    <div className="min-h-screen bg-[#0f1117] text-white px-6 py-8">
+    <div
+      className="
+        min-h-screen
+        bg-[#0f1117]
+        text-white
+        px-6
+        py-8
+      "
+    >
 
       {/* =================================================
           HEADER
@@ -328,13 +772,26 @@ function Dashboard() {
 
       <div className="mb-8">
 
-        <h1 className="text-4xl font-bold tracking-tight">
+        <h1
+          className="
+            text-4xl
+            font-bold
+            tracking-tight
+          "
+        >
 
           Good afternoon, Kalai 👋
 
         </h1>
 
-        <p className="text-gray-400 mt-2 text-lg">
+
+        <p
+          className="
+            text-gray-400
+            mt-2
+            text-lg
+          "
+        >
 
           Here's your productivity overview for today.
 
@@ -349,16 +806,18 @@ function Dashboard() {
 
       {error && (
 
-        <div className="
-          mb-6
-          rounded-xl
-          border
-          border-red-500/30
-          bg-red-500/10
-          px-5
-          py-4
-          text-red-400
-        ">
+        <div
+          className="
+            mb-6
+            rounded-xl
+            border
+            border-red-500/30
+            bg-red-500/10
+            px-5
+            py-4
+            text-red-400
+          "
+        >
 
           {error}
 
@@ -371,89 +830,47 @@ function Dashboard() {
           STAT CARDS
       ================================================= */}
 
-      <div className="
-        grid
-        grid-cols-1
-        md:grid-cols-3
-        gap-5
-        mb-8
-      ">
-
-
-        {/* FOCUS TIME */}
-
-        <div className="
-          bg-[#181b24]
-          border
-          border-gray-800
-          rounded-2xl
-          p-6
-        ">
-
-          <div className="flex items-center gap-3">
-
-            <div className="
-              w-10
-              h-10
-              rounded-xl
-              bg-indigo-500/10
-              flex
-              items-center
-              justify-center
-            ">
-
-              <Clock3
-                size={21}
-                className="text-indigo-400"
-              />
-
-            </div>
-
-            <p className="text-gray-400">
-
-              Focus Time
-
-            </p>
-
-          </div>
-
-          <h2 className="
-            text-3xl
-            font-bold
-            mt-5
-          ">
-
-            {loading
-              ? "..."
-              : formatDuration(focusTime)
-            }
-
-          </h2>
-
-        </div>
-
+      <div
+        className="
+          grid
+          grid-cols-1
+          md:grid-cols-2
+          gap-5
+          mb-8
+        "
+      >
 
         {/* ACTIVITY TIME */}
 
-        <div className="
-          bg-[#181b24]
-          border
-          border-gray-800
-          rounded-2xl
-          p-6
-        ">
+        <div
+          className="
+            bg-[#181b24]
+            border
+            border-gray-800
+            rounded-2xl
+            p-6
+          "
+        >
 
-          <div className="flex items-center gap-3">
-
-            <div className="
-              w-10
-              h-10
-              rounded-xl
-              bg-blue-500/10
+          <div
+            className="
               flex
               items-center
-              justify-center
-            ">
+              gap-3
+            "
+          >
+
+            <div
+              className="
+                w-10
+                h-10
+                rounded-xl
+                bg-blue-500/10
+                flex
+                items-center
+                justify-center
+              "
+            >
 
               <ActivityIcon
                 size={21}
@@ -461,6 +878,7 @@ function Dashboard() {
               />
 
             </div>
+
 
             <p className="text-gray-400">
 
@@ -470,16 +888,20 @@ function Dashboard() {
 
           </div>
 
-          <h2 className="
-            text-3xl
-            font-bold
-            mt-5
-          ">
+
+          <h2
+            className="
+              text-3xl
+              font-bold
+              mt-5
+            "
+          >
 
             {loading
               ? "..."
-              : formatDuration(activityTime)
-            }
+              : formatDuration(
+                  activityTime
+                )}
 
           </h2>
 
@@ -488,25 +910,35 @@ function Dashboard() {
 
         {/* SLEEP */}
 
-        <div className="
-          bg-[#181b24]
-          border
-          border-gray-800
-          rounded-2xl
-          p-6
-        ">
+        <div
+          className="
+            bg-[#181b24]
+            border
+            border-gray-800
+            rounded-2xl
+            p-6
+          "
+        >
 
-          <div className="flex items-center gap-3">
-
-            <div className="
-              w-10
-              h-10
-              rounded-xl
-              bg-purple-500/10
+          <div
+            className="
               flex
               items-center
-              justify-center
-            ">
+              gap-3
+            "
+          >
+
+            <div
+              className="
+                w-10
+                h-10
+                rounded-xl
+                bg-purple-500/10
+                flex
+                items-center
+                justify-center
+              "
+            >
 
               <Moon
                 size={21}
@@ -514,6 +946,7 @@ function Dashboard() {
               />
 
             </div>
+
 
             <p className="text-gray-400">
 
@@ -523,16 +956,20 @@ function Dashboard() {
 
           </div>
 
-          <h2 className="
-            text-3xl
-            font-bold
-            mt-5
-          ">
+
+          <h2
+            className="
+              text-3xl
+              font-bold
+              mt-5
+            "
+          >
 
             {loading
               ? "..."
-              : formatDuration(sleepTime)
-            }
+              : formatDuration(
+                  sleepTime
+                )}
 
           </h2>
 
@@ -545,43 +982,55 @@ function Dashboard() {
           CURRENT ACTIVITY
       ================================================= */}
 
-      <div className="
-        bg-[#181b24]
-        border
-        border-gray-800
-        rounded-2xl
-        p-6
-        mb-10
-      ">
+      <div
+        className="
+          bg-[#181b24]
+          border
+          border-gray-800
+          rounded-2xl
+          p-6
+          mb-10
+        "
+      >
 
-        <div className="
-          flex
-          flex-col
-          md:flex-row
-          items-start
-          md:items-center
-          justify-between
-          gap-6
-        ">
-
+        <div
+          className="
+            flex
+            flex-col
+            md:flex-row
+            items-start
+            md:items-center
+            justify-between
+            gap-6
+          "
+        >
 
           <div>
 
-            <p className="text-gray-400 text-sm">
+            <p
+              className="
+                text-gray-400
+                text-sm
+              "
+            >
 
               Current Activity
 
             </p>
 
-            <h2 className="
-              text-xl
-              font-semibold
-              mt-2
-            ">
+
+            <h2
+              className="
+                text-xl
+                font-semibold
+                mt-2
+              "
+            >
 
               No activity selected
 
             </h2>
+
 
             <button
               type="button"
@@ -616,22 +1065,27 @@ function Dashboard() {
 
           <div className="text-right">
 
-            <p className="
-              text-5xl
-              font-mono
-              font-bold
-            ">
+            <p
+              className="
+                text-5xl
+                font-mono
+                font-bold
+              "
+            >
 
               00:00:00
 
             </p>
 
-            <p className="
-              text-gray-500
-              mt-2
-            ">
 
-              Timer not started
+            <p
+              className="
+                text-gray-500
+                mt-2
+              "
+            >
+
+              Timer controlled from Activity page
 
             </p>
 
@@ -648,52 +1102,60 @@ function Dashboard() {
 
       <div>
 
+        {/* HEADER */}
 
-        {/* HISTORY HEADER */}
-
-        <div className="
-          flex
-          flex-col
-          sm:flex-row
-          items-start
-          sm:items-center
-          justify-between
-          gap-4
-          mb-5
-        ">
+        <div
+          className="
+            flex
+            flex-col
+            sm:flex-row
+            items-start
+            sm:items-center
+            justify-between
+            gap-4
+            mb-5
+          "
+        >
 
           <div>
 
-            <h2 className="
-              text-2xl
-              font-semibold
-            ">
+            <h2
+              className="
+                text-2xl
+                font-semibold
+              "
+            >
 
               Timer History
 
             </h2>
 
-            <p className="
-              text-gray-400
-              mt-1
-            ">
 
-              Review your previous focus sessions.
+            <p
+              className="
+                text-gray-400
+                mt-1
+              "
+            >
+
+              Review your study sessions and focused time.
 
             </p>
 
           </div>
 
 
-          <div className="
-            px-4
-            py-2
-            rounded-xl
-            bg-[#181b24]
-            border
-            border-gray-800
-            text-gray-300
-          ">
+          <div
+            className="
+              px-4
+              py-2
+              rounded-xl
+              bg-[#181b24]
+              border
+              border-gray-800
+              text-gray-300
+            "
+          >
 
             Sessions: {timerHistory.length}
 
@@ -706,16 +1168,18 @@ function Dashboard() {
 
         {historyError && (
 
-          <div className="
-            mb-5
-            rounded-xl
-            border
-            border-red-500/30
-            bg-red-500/10
-            px-5
-            py-4
-            text-red-400
-          ">
+          <div
+            className="
+              mb-5
+              rounded-xl
+              border
+              border-red-500/30
+              bg-red-500/10
+              px-5
+              py-4
+              text-red-400
+            "
+          >
 
             {historyError}
 
@@ -728,14 +1192,16 @@ function Dashboard() {
 
         {historyLoading ? (
 
-          <div className="
-            bg-[#181b24]
-            border
-            border-gray-800
-            rounded-2xl
-            p-8
-            text-center
-          ">
+          <div
+            className="
+              bg-[#181b24]
+              border
+              border-gray-800
+              rounded-2xl
+              p-8
+              text-center
+            "
+          >
 
             <p className="text-gray-400">
 
@@ -749,25 +1215,29 @@ function Dashboard() {
 
           /* NO HISTORY */
 
-          <div className="
-            bg-[#181b24]
-            border
-            border-gray-800
-            rounded-2xl
-            p-10
-            text-center
-          ">
-
-            <div className="
-              w-14
-              h-14
-              mx-auto
+          <div
+            className="
+              bg-[#181b24]
+              border
+              border-gray-800
               rounded-2xl
-              bg-indigo-500/10
-              flex
-              items-center
-              justify-center
-            ">
+              p-10
+              text-center
+            "
+          >
+
+            <div
+              className="
+                w-14
+                h-14
+                mx-auto
+                rounded-2xl
+                bg-indigo-500/10
+                flex
+                items-center
+                justify-center
+              "
+            >
 
               <Clock3
                 size={26}
@@ -776,23 +1246,28 @@ function Dashboard() {
 
             </div>
 
-            <h3 className="
-              text-lg
-              font-semibold
-              mt-5
-            ">
+
+            <h3
+              className="
+                text-lg
+                font-semibold
+                mt-5
+              "
+            >
 
               No timer sessions yet
 
             </h3>
 
-            <p className="
-              text-gray-500
-              mt-2
-            ">
 
-              Start an activity to create your
-              first focus session.
+            <p
+              className="
+                text-gray-500
+                mt-2
+              "
+            >
+
+              Start an activity to create your first study session.
 
             </p>
 
@@ -804,153 +1279,785 @@ function Dashboard() {
 
           <div className="space-y-4">
 
-            {timerHistory.map((session) => {
+            {timerHistory.map(
+              (session) => {
 
-              const activity =
-                session.activity || {};
-
-
-              const activityName =
-                activity.name ||
-                "Unknown Activity";
+                const activity =
+                  session.activity || {};
 
 
-              const category =
-                activity.category ||
-                "General";
+                const activityName =
+                  activity.name ||
+                  "Unknown Activity";
 
 
-              const classification =
-                activity.classification ||
-                "Activity";
+                const category =
+                  activity.category ||
+                  "General";
 
 
-              const duration =
-                Number(
-                  session.durationSeconds || 0
-                );
+                const classification =
+                  activity.classification ||
+                  "Activity";
 
 
-              return (
+                // =================================================
+                // DYNAMIC TOTAL TIME
+                // =================================================
 
-                <div
-                  key={session.id}
-                  className="
-                    bg-[#181b24]
-                    border
-                    border-gray-800
-                    rounded-2xl
-                    p-5
-                    hover:border-gray-700
-                    transition
-                  "
-                >
-
-                  {/* =================================================
-                      TOP SECTION
-                  ================================================= */}
-
-                  <div className="
-                    flex
-                    flex-col
-                    md:flex-row
-                    md:items-center
-                    md:justify-between
-                    gap-5
-                  ">
+                const duration =
+                  getCurrentDuration(
+                    session
+                  );
 
 
-                    {/* LEFT */}
+                // =================================================
+                // WASTED TIME
+                // =================================================
 
-                    <div className="
-                      flex
-                      items-start
-                      gap-4
-                    ">
+                const wasted =
+                  Math.min(
+                    Math.max(
+                      Number(
+                        session.wastedSeconds ||
+                        0
+                      ),
+                      0
+                    ),
+                    duration
+                  );
 
-                      <div className="
-                        w-12
-                        h-12
-                        rounded-xl
-                        bg-indigo-500/10
+
+                // =================================================
+                // FOCUSED TIME
+                // =================================================
+
+                const focusedTime =
+                  Math.max(
+                    0,
+                    duration - wasted
+                  );
+
+
+                const isRunning =
+                  session.status ===
+                  "RUNNING";
+
+
+                const isPaused =
+                  session.status ===
+                  "PAUSED";
+
+
+                const isCompleted =
+                  session.status ===
+                  "COMPLETED";
+
+
+                const isActionLoading =
+                  actionSessionId ===
+                  session.id;
+
+
+                return (
+
+                  <div
+                    key={session.id}
+                    className="
+                      bg-[#181b24]
+                      border
+                      border-gray-800
+                      rounded-2xl
+                      p-5
+                      hover:border-gray-700
+                      transition
+                    "
+                  >
+
+                    {/* =================================================
+                        TOP SECTION
+                    ================================================= */}
+
+                    <div
+                      className="
                         flex
-                        items-center
-                        justify-center
-                        shrink-0
-                      ">
+                        flex-col
+                        md:flex-row
+                        md:items-center
+                        md:justify-between
+                        gap-5
+                      "
+                    >
 
-                        <Clock3
-                          size={22}
-                          className="text-indigo-400"
-                        />
+                      {/* LEFT */}
 
-                      </div>
-
-
-                      <div>
-
-                        <h3 className="
-                          text-lg
-                          font-semibold
-                          text-white
-                        ">
-
-                          {activityName}
-
-                        </h3>
-
-
-                        <div className="
+                      <div
+                        className="
                           flex
-                          flex-wrap
-                          gap-2
-                          mt-2
-                        ">
+                          items-start
+                          gap-4
+                        "
+                      >
 
-                          <span className="
-                            px-3
-                            py-1
-                            rounded-full
-                            bg-gray-800
-                            text-gray-300
-                            text-xs
-                          ">
+                        <div
+                          className="
+                            w-12
+                            h-12
+                            rounded-xl
+                            bg-indigo-500/10
+                            flex
+                            items-center
+                            justify-center
+                            shrink-0
+                          "
+                        >
 
-                            {category}
-
-                          </span>
-
-
-                          <span className="
-                            px-3
-                            py-1
-                            rounded-full
-                            bg-gray-800
-                            text-gray-300
-                            text-xs
-                          ">
-
-                            {classification}
-
-                          </span>
+                          <Clock3
+                            size={22}
+                            className="text-indigo-400"
+                          />
 
                         </div>
 
 
-                        <p className="
-                          text-gray-500
-                          text-sm
-                          mt-3
-                        ">
+                        <div>
 
-                          {formatDate(
-                            session.startTime
+                          <h3
+                            className="
+                              text-lg
+                              font-semibold
+                              text-white
+                            "
+                          >
+
+                            {activityName}
+
+                          </h3>
+
+
+                          <div
+                            className="
+                              flex
+                              flex-wrap
+                              gap-2
+                              mt-2
+                            "
+                          >
+
+                            <span
+                              className="
+                                px-3
+                                py-1
+                                rounded-full
+                                bg-gray-800
+                                text-gray-300
+                                text-xs
+                              "
+                            >
+
+                              {category}
+
+                            </span>
+
+
+                            <span
+                              className="
+                                px-3
+                                py-1
+                                rounded-full
+                                bg-gray-800
+                                text-gray-300
+                                text-xs
+                              "
+                            >
+
+                              {classification}
+
+                            </span>
+
+                          </div>
+
+
+                          <p
+                            className="
+                              text-gray-500
+                              text-sm
+                              mt-3
+                            "
+                          >
+
+                            {formatDate(
+                              session.startTime
+                            )}
+
+                            {" • "}
+
+                            {formatTime(
+                              session.startTime
+                            )}
+
+                          </p>
+
+                        </div>
+
+                      </div>
+
+
+                      {/* RIGHT */}
+
+                      <div
+                        className="
+                          flex
+                          flex-col
+                          items-start
+                          md:items-end
+                        "
+                      >
+
+                        {/* TIMER */}
+
+                        <p
+                          className="
+                            text-2xl
+                            font-bold
+                            text-white
+                          "
+                        >
+
+                          {formatDuration(
+                            duration
                           )}
 
-                          {" • "}
+                        </p>
 
-                          {formatTime(
-                            session.startTime
+
+                        {/* STATUS */}
+
+                        <span
+                          className={`
+                            inline-block
+                            mt-2
+                            px-3
+                            py-1
+                            rounded-full
+                            text-xs
+                            font-medium
+
+                            ${
+                              isCompleted
+                                ? "bg-green-500/10 text-green-400"
+                                : isPaused
+                                ? "bg-yellow-500/10 text-yellow-400"
+                                : "bg-blue-500/10 text-blue-400"
+                            }
+                          `}
+                        >
+
+                          {session.status}
+
+                        </span>
+
+
+                        {/* =================================================
+                            TIMER CONTROLS
+                        ================================================= */}
+
+                        <div
+                          className="
+                            flex
+                            flex-wrap
+                            gap-2
+                            mt-3
+                          "
+                        >
+
+                          {/* RESUME */}
+
+                          {isPaused && (
+
+                            <button
+                              type="button"
+                              disabled={
+                                isActionLoading
+                              }
+                              onClick={() =>
+                                handleResumeSession(
+                                  session.id
+                                )
+                              }
+                              className="
+                                flex
+                                items-center
+                                gap-2
+                                px-4
+                                py-2
+                                rounded-lg
+                                bg-green-500/10
+                                border
+                                border-green-500/30
+                                text-green-400
+                                hover:bg-green-500/20
+                                disabled:opacity-50
+                                transition
+                              "
+                            >
+
+                              <Play
+                                size={16}
+                              />
+
+                              {isActionLoading
+                                ? "Resuming..."
+                                : "Resume"}
+
+                            </button>
+
+                          )}
+
+
+                          {/* PAUSE */}
+
+                          {isRunning && (
+
+                            <button
+                              type="button"
+                              disabled={
+                                isActionLoading
+                              }
+                              onClick={() =>
+                                handlePauseSession(
+                                  session.id
+                                )
+                              }
+                              className="
+                                flex
+                                items-center
+                                gap-2
+                                px-4
+                                py-2
+                                rounded-lg
+                                bg-yellow-500/10
+                                border
+                                border-yellow-500/30
+                                text-yellow-400
+                                hover:bg-yellow-500/20
+                                disabled:opacity-50
+                                transition
+                              "
+                            >
+
+                              <Pause
+                                size={16}
+                              />
+
+                              {isActionLoading
+                                ? "Pausing..."
+                                : "Pause"}
+
+                            </button>
+
+                          )}
+
+
+                          {/* STOP */}
+
+                          {!isCompleted && (
+
+                            <button
+                              type="button"
+                              disabled={
+                                isActionLoading
+                              }
+                              onClick={() =>
+                                handleStopSession(
+                                  session.id
+                                )
+                              }
+                              className="
+                                flex
+                                items-center
+                                gap-2
+                                px-4
+                                py-2
+                                rounded-lg
+                                bg-orange-500/10
+                                border
+                                border-orange-500/30
+                                text-orange-400
+                                hover:bg-orange-500/20
+                                disabled:opacity-50
+                                transition
+                              "
+                            >
+
+                              <Square
+                                size={15}
+                              />
+
+                              {isActionLoading
+                                ? "Stopping..."
+                                : "Stop"}
+
+                            </button>
+
+                          )}
+
+
+                          {/* DELETE */}
+
+                          <button
+                            type="button"
+                            disabled={
+                              isActionLoading
+                            }
+                            onClick={() =>
+                              handleDeleteTimerSession(
+                                session.id
+                              )
+                            }
+                            className="
+                              flex
+                              items-center
+                              gap-2
+                              px-4
+                              py-2
+                              rounded-lg
+                              border
+                              border-red-500/30
+                              bg-red-500/10
+                              text-red-400
+                              hover:bg-red-500/20
+                              hover:border-red-500/50
+                              disabled:opacity-50
+                              transition
+                            "
+                            title="Delete timer session"
+                          >
+
+                            <Trash2
+                              size={16}
+                            />
+
+                            Delete
+
+                          </button>
+
+                        </div>
+
+                      </div>
+
+                    </div>
+
+
+                    {/* =================================================
+                        TIME SUMMARY
+                    ================================================= */}
+
+                    <div
+                      className="
+                        border-t
+                        border-gray-800
+                        mt-5
+                        pt-5
+                        grid
+                        grid-cols-1
+                        md:grid-cols-3
+                        gap-4
+                      "
+                    >
+
+                      {/* TOTAL TIME */}
+
+                      <div
+                        className="
+                          rounded-xl
+                          bg-[#10131a]
+                          border
+                          border-gray-800
+                          p-4
+                        "
+                      >
+
+                        <p
+                          className="
+                            text-gray-500
+                            text-sm
+                          "
+                        >
+
+                          Total Time
+
+                        </p>
+
+
+                        <p
+                          className="
+                            text-white
+                            text-xl
+                            font-semibold
+                            mt-2
+                          "
+                        >
+
+                          {formatDuration(
+                            duration
+                          )}
+
+                        </p>
+
+                      </div>
+
+
+                      {/* WASTED TIME */}
+
+                      <div
+                        className="
+                          rounded-xl
+                          bg-[#10131a]
+                          border
+                          border-gray-800
+                          p-4
+                        "
+                      >
+
+                        <div
+                          className="
+                            flex
+                            items-center
+                            justify-between
+                            gap-2
+                          "
+                        >
+
+                          <p
+                            className="
+                              text-gray-500
+                              text-sm
+                            "
+                          >
+
+                            Wasted Time
+
+                          </p>
+
+
+                          {editingSessionId !==
+                            session.id && (
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                startEditingWastedTime(
+                                  session
+                                )
+                              }
+                              className="
+                                text-gray-400
+                                hover:text-white
+                                transition
+                              "
+                              title="Edit wasted time"
+                            >
+
+                              <Pencil
+                                size={15}
+                              />
+
+                            </button>
+
+                          )}
+
+                        </div>
+
+
+                        {editingSessionId ===
+                        session.id ? (
+
+                          <div
+                            className="
+                              mt-3
+                              flex
+                              flex-col
+                              gap-2
+                            "
+                          >
+
+                            <div
+                              className="
+                                flex
+                                items-center
+                                gap-2
+                              "
+                            >
+
+                              <input
+                                type="number"
+                                min="0"
+                                max={duration}
+                                value={
+                                  wastedInput
+                                }
+                                onChange={(e) =>
+                                  setWastedInput(
+                                    e.target.value
+                                  )
+                                }
+                                className="
+                                  w-full
+                                  bg-[#181b24]
+                                  border
+                                  border-gray-700
+                                  rounded-lg
+                                  px-3
+                                  py-2
+                                  text-white
+                                  outline-none
+                                  focus:border-indigo-500
+                                "
+                                placeholder="Seconds"
+                              />
+
+
+                              <span
+                                className="
+                                  text-gray-500
+                                  text-sm
+                                "
+                              >
+
+                                sec
+
+                              </span>
+
+                            </div>
+
+
+                            <div
+                              className="
+                                flex
+                                gap-2
+                              "
+                            >
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleSaveWastedTime(
+                                    session
+                                  )
+                                }
+                                disabled={
+                                  savingWastedId ===
+                                  session.id
+                                }
+                                className="
+                                  flex
+                                  items-center
+                                  gap-2
+                                  px-3
+                                  py-2
+                                  rounded-lg
+                                  bg-indigo-500
+                                  text-white
+                                  text-sm
+                                  hover:bg-indigo-600
+                                  disabled:opacity-50
+                                "
+                              >
+
+                                <Save
+                                  size={14}
+                                />
+
+                                {savingWastedId ===
+                                session.id
+                                  ? "Saving..."
+                                  : "Save"}
+
+                              </button>
+
+
+                              <button
+                                type="button"
+                                onClick={
+                                  cancelEditingWastedTime
+                                }
+                                className="
+                                  px-3
+                                  py-2
+                                  rounded-lg
+                                  bg-gray-800
+                                  text-gray-300
+                                  text-sm
+                                  hover:bg-gray-700
+                                "
+                              >
+
+                                Cancel
+
+                              </button>
+
+                            </div>
+
+                          </div>
+
+                        ) : (
+
+                          <p
+                            className="
+                              text-yellow-400
+                              text-xl
+                              font-semibold
+                              mt-2
+                            "
+                          >
+
+                            {formatDuration(
+                              wasted
+                            )}
+
+                          </p>
+
+                        )}
+
+                      </div>
+
+
+                      {/* FOCUSED TIME */}
+
+                      <div
+                        className="
+                          rounded-xl
+                          bg-[#10131a]
+                          border
+                          border-gray-800
+                          p-4
+                        "
+                      >
+
+                        <p
+                          className="
+                            text-gray-500
+                            text-sm
+                          "
+                        >
+
+                          Focused Time
+
+                        </p>
+
+
+                        <p
+                          className="
+                            text-green-400
+                            text-xl
+                            font-semibold
+                            mt-2
+                          "
+                        >
+
+                          {formatDuration(
+                            focusedTime
                           )}
 
                         </p>
@@ -960,200 +2067,113 @@ function Dashboard() {
                     </div>
 
 
-                    {/* RIGHT */}
+                    {/* =================================================
+                        SESSION DETAILS
+                    ================================================= */}
 
-                    <div className="
-                      flex
-                      flex-col
-                      items-start
-                      md:items-end
-                    ">
+                    <div
+                      className="
+                        border-t
+                        border-gray-800
+                        mt-5
+                        pt-4
+                        grid
+                        grid-cols-1
+                        md:grid-cols-3
+                        gap-4
+                        text-sm
+                      "
+                    >
 
-                      <p className="
-                        text-2xl
-                        font-bold
-                        text-white
-                      ">
+                      {/* STARTED */}
 
-                        {formatDuration(duration)}
+                      <div>
 
-                      </p>
+                        <p className="text-gray-500">
+
+                          Started
+
+                        </p>
+
+
+                        <p
+                          className="
+                            text-gray-300
+                            mt-1
+                          "
+                        >
+
+                          {formatTime(
+                            session.startTime
+                          )}
+
+                        </p>
+
+                      </div>
+
+
+                      {/* ENDED */}
+
+                      <div>
+
+                        <p className="text-gray-500">
+
+                          Ended
+
+                        </p>
+
+
+                        <p
+                          className="
+                            text-gray-300
+                            mt-1
+                          "
+                        >
+
+                          {session.endTime
+                            ? formatTime(
+                                session.endTime
+                              )
+                            : "-"}
+
+                        </p>
+
+                      </div>
 
 
                       {/* STATUS */}
 
-                      <span
-                        className={`
-                          inline-block
-                          mt-2
-                          px-3
-                          py-1
-                          rounded-full
-                          text-xs
-                          font-medium
+                      <div>
 
-                          ${
-                            session.status ===
-                            "COMPLETED"
+                        <p className="text-gray-500">
 
-                              ? "bg-green-500/10 text-green-400"
+                          Status
 
-                              : session.status ===
-                                "PAUSED"
-
-                              ? "bg-yellow-500/10 text-yellow-400"
-
-                              : "bg-blue-500/10 text-blue-400"
-                          }
-                        `}
-                      >
-
-                        {session.status ||
-                          "UNKNOWN"}
-
-                      </span>
+                        </p>
 
 
-                      {/* =================================================
-                          DELETE BUTTON
-                      ================================================= */}
+                        <p
+                          className="
+                            text-gray-300
+                            mt-1
+                          "
+                        >
 
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleDeleteTimerSession(
-                            session.id
-                          )
-                        }
-                        className="
-                          mt-3
-                          flex
-                          items-center
-                          justify-center
-                          gap-2
-                          px-4
-                          py-2
-                          rounded-lg
-                          border
-                          border-red-500/30
-                          bg-red-500/10
-                          text-red-400
-                          hover:bg-red-500/20
-                          hover:border-red-500/50
-                          transition
-                        "
-                        title="Delete timer session"
-                      >
+                          {session.status ||
+                            "-"}
 
-                        <Trash2 size={16} />
+                        </p>
 
-                        Delete
-
-                      </button>
+                      </div>
 
                     </div>
 
                   </div>
 
+                );
 
-                  {/* =================================================
-                      SESSION DETAILS
-                  ================================================= */}
-
-                  <div className="
-                    border-t
-                    border-gray-800
-                    mt-5
-                    pt-4
-                    grid
-                    grid-cols-1
-                    md:grid-cols-3
-                    gap-4
-                    text-sm
-                  ">
-
-
-                    {/* STARTED */}
-
-                    <div>
-
-                      <p className="text-gray-500">
-
-                        Started
-
-                      </p>
-
-                      <p className="
-                        text-gray-300
-                        mt-1
-                      ">
-
-                        {formatTime(
-                          session.startTime
-                        )}
-
-                      </p>
-
-                    </div>
-
-
-                    {/* ENDED */}
-
-                    <div>
-
-                      <p className="text-gray-500">
-
-                        Ended
-
-                      </p>
-
-                      <p className="
-                        text-gray-300
-                        mt-1
-                      ">
-
-                        {session.endTime
-                          ? formatTime(
-                              session.endTime
-                            )
-                          : "-"
-                        }
-
-                      </p>
-
-                    </div>
-
-
-                    {/* DURATION */}
-
-                    <div>
-
-                      <p className="text-gray-500">
-
-                        Duration
-
-                      </p>
-
-                      <p className="
-                        text-gray-300
-                        mt-1
-                      ">
-
-                        {formatDuration(
-                          duration
-                        )}
-
-                      </p>
-
-                    </div>
-
-                  </div>
-
-                </div>
-
-              );
-
-            })}
+              }
+            )}
 
           </div>
 

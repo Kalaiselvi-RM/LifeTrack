@@ -116,4 +116,22 @@ public class TimerSessionController {
 
         return ResponseEntity.noContent().build();
     }
+// =====================================================
+// UPDATE WASTED TIME
+// PUT /api/timer-sessions/{sessionId}/wasted-time
+// =====================================================
+
+@PutMapping("/{sessionId}/wasted-time")
+public ResponseEntity<TimerSession> updateWastedTime(
+        @PathVariable Long sessionId,
+        @RequestBody Long wastedSeconds
+) {
+
+    return ResponseEntity.ok(
+            timerSessionService.updateWastedTime(
+                    sessionId,
+                    wastedSeconds
+            )
+    );
+}
 }

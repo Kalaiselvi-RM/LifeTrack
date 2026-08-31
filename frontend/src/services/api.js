@@ -457,3 +457,40 @@ export async function deleteTimerSession(sessionId) {
     ? JSON.parse(text)
     : true;
 }
+// =====================================================
+// UPDATE WASTED TIME
+// =====================================================
+
+export async function updateWastedTime(
+  sessionId,
+  wastedSeconds
+) {
+
+  const response = await fetch(
+    `${API_BASE_URL}/timer-sessions/${sessionId}/wasted-time`,
+    {
+      method: "PUT",
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify(
+        Number(wastedSeconds)
+      ),
+    }
+  );
+
+
+  if (!response.ok) {
+
+    throw new Error(
+      "Failed to update wasted time"
+    );
+
+  }
+
+
+  return response.json();
+
+}

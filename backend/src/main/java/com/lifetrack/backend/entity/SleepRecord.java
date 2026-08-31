@@ -2,6 +2,9 @@ package com.lifetrack.backend.entity;
 
 import jakarta.persistence.*;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+
 @Entity
 @Table(name = "sleep_records")
 public class SleepRecord {
@@ -10,44 +13,61 @@ public class SleepRecord {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private java.time.LocalDate date;
+    // Date associated with this sleep record
+    @Column(nullable = false)
+    private LocalDate date;
 
-    private java.time.LocalTime sleepTime;
+    // Time when the user went to sleep
+    @Column(nullable = false)
+    private LocalTime sleepTime;
 
-    private java.time.LocalTime wakeTime;
+    // Time when the user woke up
+    @Column(nullable = false)
+    private LocalTime wakeTime;
 
+    // Calculated sleep duration in minutes
+    @Column(nullable = false)
     private Integer durationMinutes;
 
+    // Example: Good, Average, Poor
     private String quality;
+
+    // =====================================================
+    // CONSTRUCTOR
+    // =====================================================
 
     public SleepRecord() {
     }
+
+    // =====================================================
+    // GETTERS AND SETTERS
+    // =====================================================
 
     public Long getId() {
         return id;
     }
 
-    public java.time.LocalDate getDate() {
+    public LocalDate getDate() {
         return date;
     }
 
-    public void setDate(java.time.LocalDate date) {
+    public void setDate(LocalDate date) {
         this.date = date;
     }
 
-    public java.time.LocalTime getSleepTime() {
+    public LocalTime getSleepTime() {
         return sleepTime;
     }
 
-    public void setSleepTime(java.time.LocalTime sleepTime) {
+    public void setSleepTime(LocalTime sleepTime) {
         this.sleepTime = sleepTime;
     }
 
-    public java.time.LocalTime getWakeTime() {
+    public LocalTime getWakeTime() {
         return wakeTime;
     }
 
-    public void setWakeTime(java.time.LocalTime wakeTime) {
+    public void setWakeTime(LocalTime wakeTime) {
         this.wakeTime = wakeTime;
     }
 
