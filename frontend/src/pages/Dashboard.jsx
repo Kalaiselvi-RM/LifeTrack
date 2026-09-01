@@ -759,10 +759,15 @@ function Dashboard() {
     <div
       className="
         min-h-screen
+        w-full
+        max-w-full
+        overflow-x-hidden
         bg-[#0f1117]
         text-white
-        px-6
-        py-8
+        px-4
+        sm:px-6
+        py-5
+        sm:py-8
       "
     >
 
@@ -774,9 +779,11 @@ function Dashboard() {
 
         <h1
           className="
-            text-4xl
+            text-2xl
+            sm:text-4xl
             font-bold
             tracking-tight
+            leading-tight
           "
         >
 
@@ -789,7 +796,8 @@ function Dashboard() {
           className="
             text-gray-400
             mt-2
-            text-lg
+            text-sm
+            sm:text-lg
           "
         >
 
@@ -848,7 +856,8 @@ function Dashboard() {
             border
             border-gray-800
             rounded-2xl
-            p-6
+            p-4
+            sm:p-6
           "
         >
 
@@ -916,7 +925,8 @@ function Dashboard() {
             border
             border-gray-800
             rounded-2xl
-            p-6
+            p-4
+            sm:p-6
           "
         >
 
@@ -1038,8 +1048,10 @@ function Dashboard() {
                 mt-5
                 flex
                 items-center
+                justify-center
                 gap-2
-                px-5
+                px-4
+                sm:px-5
                 py-3
                 rounded-xl
                 bg-white
@@ -1047,6 +1059,8 @@ function Dashboard() {
                 font-medium
                 hover:bg-gray-200
                 transition
+                w-full
+                sm:w-auto
               "
               onClick={() => {
                 window.location.href =
@@ -1063,7 +1077,7 @@ function Dashboard() {
           </div>
 
 
-          <div className="text-right">
+          <div className="text-left md:text-right w-full md:w-auto">
 
             <p
               className="
@@ -1568,6 +1582,8 @@ function Dashboard() {
                             flex-wrap
                             gap-2
                             mt-3
+                            w-full
+                            md:w-auto
                           "
                         >
 
